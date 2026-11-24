@@ -73,6 +73,8 @@ struct MenuContent: View {
         Button(L("menu.trash")) { controller.openTrashReview() }
             .disabled(controller.lastTrashedCount == 0)
         Divider()
+        Toggle(L("menu.park"), isOn: $settings.parkOnDesktop)
+        Divider()
         Button(L("menu.demo.make")) { DemoClutter.make() }
         Button(L("menu.demo.clear")) { DemoClutter.clear() }
         Divider()

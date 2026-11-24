@@ -62,6 +62,9 @@ final class AppSettings: ObservableObject {
     @Published var getsStuck: Bool { didSet { d.set(getsStuck, forKey: "getsStuck") } }
     @Published var aboveWindows: Bool { didSet { d.set(aboveWindows, forKey: "aboveWindows") } }
     @Published var showHUD: Bool { didSet { d.set(showHUD, forKey: "showHUD") } }
+    /// Where the user dragged the dock, in top-left screen points; negative means the default corner.
+    @Published var dockX: Double { didSet { d.set(dockX, forKey: "dockX") } }
+    @Published var dockY: Double { didSet { d.set(dockY, forKey: "dockY") } }
     @Published var parkOnDesktop: Bool {
         didSet { d.set(parkOnDesktop, forKey: "parkOnDesktop"); CleaningController.shared.refreshParking() }
     }
@@ -114,6 +117,8 @@ final class AppSettings: ObservableObject {
         aboveWindows = d.object(forKey: "aboveWindows") as? Bool ?? false
         showHUD = d.object(forKey: "showHUD") as? Bool ?? true
         parkOnDesktop = d.object(forKey: "parkOnDesktop") as? Bool ?? false
+        dockX = d.object(forKey: "dockX") as? Double ?? -1
+        dockY = d.object(forKey: "dockY") as? Double ?? -1
 
         targetFolderPath = d.string(forKey: "targetFolderPath") ?? AppSettings.desktopURL.path
         destination = DestinationMode(rawValue: d.string(forKey: "destination") ?? "") ?? .archiveFolder

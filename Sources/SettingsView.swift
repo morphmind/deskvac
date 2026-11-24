@@ -143,6 +143,9 @@ struct RobotTab: View {
                     Text(L("set.park"))
                     Text(L("set.park.help"))
                 }
+                if settings.parkOnDesktop, settings.dockX >= 0 {
+                    Button(L("set.resetDock")) { CleaningController.shared.resetDockPosition() }
+                }
                 Toggle(L("set.bubbles"), isOn: $settings.bubbles)
                 Toggle(L("set.scanAnim"), isOn: $settings.scanAnimation)
                 Toggle(L("set.stuck"), isOn: $settings.getsStuck)
