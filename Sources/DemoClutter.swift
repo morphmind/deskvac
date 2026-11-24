@@ -4,7 +4,7 @@ import AppKit
 /// the `io.onore.deskvac.demo` extended attribute, and `clear()` only ever touches files with it.
 @MainActor
 enum DemoClutter {
-    static func make() {
+    static func make(reel: Bool = false) {
         let settings = AppSettings.shared
         guard settings.targetIsDesktop else {
             CleaningController.shared.alert(title: L("menu.demo.make"), text: L("err.demoDesktop"))
@@ -23,26 +23,30 @@ enum DemoClutter {
             made.append(url)
         }
 
-        for i in 0..<9 {
+        for i in 0..<(reel ? 5 : 9) {
             let name = L("demo.screenshot", 3 + i * 2, 9 + i, (i * 7) % 60, (i * 13) % 60)
             write(name, png(screenshot(seed: i)), daysAgo: 2 + i * 3)
         }
         write("IMG_4821.jpg", jpeg(photo(seed: 1)), daysAgo: 12)
-        write("IMG_4822.jpg", jpeg(photo(seed: 2)), daysAgo: 12)
-        write("logo-final-v3.png", png(logo()), daysAgo: 30)
+        if !reel {
+            write("IMG_4822.jpg", jpeg(photo(seed: 2)), daysAgo: 12)
+            write("logo-final-v3.png", png(logo()), daysAgo: 30)
+        }
         write("boarding pass.pdf", pdf(title: "BOARDING PASS", lines: ["IST → AMS", "Seat 14C", "Gate B7"]), daysAgo: 20)
         write("invoice_2026_11.pdf", pdf(title: "INVOICE", lines: ["#2026-11-04", "Total 1.240,00"]), daysAgo: 6)
         write(L("demo.protected"), pdf(title: "2025", lines: ["Keep me"]), daysAgo: 60)
         write("meeting notes 11-14.txt", Data("- ship the robot\n- record the reel\n".utf8), daysAgo: 9)
-        write("essay_final_FINAL_v2.docx", Data(count: 18_000), daysAgo: 40)
-        write("budget.csv", Data("month,spend\n10,1200\n11,980\n".utf8), daysAgo: 15)
         write("node_modules (1).zip", zip(), daysAgo: 50)
-        write("design-assets.zip", zip(), daysAgo: 25)
         write("Installer.dmg", Data(count: 1_400_000), daysAgo: 70)
-        write(L("demo.recording", 18), Data(count: 2_600_000), daysAgo: 5)
-        write("landing.html", Data("<!doctype html><h1>hello</h1>".utf8), daysAgo: 8)
-        write("script.py", Data("print('tidy')\n".utf8), daysAgo: 11)
-        write("voice memo.m4a", Data(count: 320_000), daysAgo: 4)
+        if !reel {
+            write("essay_final_FINAL_v2.docx", Data(count: 18_000), daysAgo: 40)
+            write("budget.csv", Data("month,spend\n10,1200\n11,980\n".utf8), daysAgo: 15)
+            write("design-assets.zip", zip(), daysAgo: 25)
+            write(L("demo.recording", 18), Data(count: 2_600_000), daysAgo: 5)
+            write("landing.html", Data("<!doctype html><h1>hello</h1>".utf8), daysAgo: 8)
+            write("script.py", Data("print('tidy')\n".utf8), daysAgo: 11)
+            write("voice memo.m4a", Data(count: 320_000), daysAgo: 4)
+        }
 
         let folder = Mover.uniqueURL(dir.appendingPathComponent(L("demo.folder")))
         if (try? fm.createDirectory(at: folder, withIntermediateDirectories: false)) != nil {
@@ -59,9 +63,14 @@ enum DemoClutter {
         guard let screen = NSScreen.screens.first else { return }
         let f = screen.frame, vf = screen.visibleFrame
         let top = f.maxY - vf.maxY + 70
-        let bottom = f.maxY - vf.minY - 90
-        let left = 150.0, right = f.width - 240
-        let pile = CGPoint(x: f.width * 0.42, y: (top + bottom) * 0.62)
+        let bottom = f.maxY - vf.minY - (Reel.band == nil ? 90 : 300)
+        var left = 150.0, right = f.width - 240
+        var pile = CGPoint(x: f.width * 0.42, y: (top + bottom) * 0.62)
+        if let band = Reel.band {
+            left = band.minX + 70
+            right = band.maxX - 70
+            pile = CGPoint(x: band.midX, y: (top + bottom) * 0.55)
+        }
         var placed: [(String, CGPoint)] = []
         for (i, n) in names.enumerated() {
             let p: CGPoint

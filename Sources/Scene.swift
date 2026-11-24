@@ -85,7 +85,7 @@ final class SceneModel: ObservableObject {
     @Published var idle = false
     let size: CGSize
     let geometry = IconGeometry.current()
-    let style: RobotStyle
+    var style: RobotStyle
     let radius: Double
     let speed: Double
     let bubblesOn: Bool
@@ -122,7 +122,8 @@ final class SceneModel: ObservableObject {
         bubblesOn = settings.bubbles
         let vf = screen.visibleFrame, f = screen.frame
         let bottom = f.maxY - vf.minY
-        dock = CGPoint(x: vf.minX - f.minX + 110, y: bottom - radius * 1.6 - 18)
+        let dockX = Reel.band.map { $0.midX } ?? (vf.minX - f.minX + 110)
+        dock = CGPoint(x: dockX, y: bottom - radius * 1.6 - 18)
         pos = dock
     }
 

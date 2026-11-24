@@ -11,6 +11,11 @@ if let i = arguments.firstIndex(of: "--render-robots"), i + 1 < arguments.count 
     MainActor.assumeIsolated { IconRenderer.renderRobots(to: URL(fileURLWithPath: arguments[i + 1])) }
     exit(0)
 }
+if let i = arguments.firstIndex(of: "--reel-art"), i + 1 < arguments.count {
+    let badge = i + 2 < arguments.count ? URL(fileURLWithPath: arguments[i + 2]) : nil
+    MainActor.assumeIsolated { ReelArt.render(to: URL(fileURLWithPath: arguments[i + 1]), badge: badge) }
+    exit(0)
+}
 if arguments.contains("--check-strings") {
     exit(L10n.check() ? 0 : 1)
 }

@@ -100,6 +100,7 @@ final class CleaningController: ObservableObject {
 
         if settings.scanAnimation && !stopRequested {
             model.buildBoxes(result.items)
+            Reel.mark("scan")
             model.say("scan")
             await model.scan()
             if !result.targets.isEmpty { model.say("found", result.targets.count) }
@@ -169,6 +170,7 @@ final class CleaningController: ObservableObject {
         summary.destination = mover.rootFolder
 
         var screenshots = 0, saidScreens = false, stuckCount = 0
+        Reel.mark("pick")
         for item in route {
             if stopRequested { break }
             if item.isProtected {
@@ -348,9 +350,14 @@ final class CleaningController: ObservableObject {
         } else if !want, let model = scene, model.idle {
             dropSceneNow()
         } else if want, let model = scene, model.idle {
-            // Colors or size may have changed: rebuild so the parked robot matches.
-            dropSceneNow()
-            refreshParking()
+            if model.radius == AppSettings.shared.robotSize / 2 {
+                // Only colors changed: repaint in place, no flicker.
+                model.style = RobotStyle.current()
+                model.objectWillChange.send()
+            } else {
+                dropSceneNow()
+                refreshParking()
+            }
         }
     }
 
@@ -431,13 +438,21 @@ final class CleaningController: ObservableObject {
         )
         let panel = FloatingPanel(view)
         card = panel
+        let band = Reel.band
+        let f = screen.frame
         panel.show(on: screen) { vf, size in
-            NSPoint(x: vf.midX + 40, y: vf.midY - size.height / 2)
+            if let band { return NSPoint(x: f.minX + band.midX - size.width / 2, y: vf.midY - size.height / 2 + 120) }
+            return NSPoint(x: vf.midX + 40, y: vf.midY - size.height / 2)
         }
     }
 
     private func teardownAndRestart() {
         start(.clean)
+    }
+
+    func closeSummary() {
+        closeCard()
+        teardownScene()
     }
 
     private func closeCard() {
