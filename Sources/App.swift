@@ -34,6 +34,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if !AppSettings.shared.hasOnboarded { NSApp.activate(ignoringOtherApps: true) }
             // `open -a DeskVac --args --demo --clean` sets up a take for a screen recording.
             let args = CommandLine.arguments
+            if args.contains("--reel") {
+                Task { await Reel.run() }
+                return
+            }
             if args.contains("--demo") { DemoClutter.make() }
             if args.contains("--clean") || args.contains("--scan") {
                 let mode: CleaningController.Mode = args.contains("--scan") ? .scanOnly : .clean
