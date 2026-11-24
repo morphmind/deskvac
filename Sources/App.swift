@@ -39,6 +39,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 Task { await Reel.stage() }
                 return
             }
+            if args.contains("--reel-full") {
+                Task { await Reel.fullTake() }
+                return
+            }
             if args.contains("--reel") {
                 Task { await Reel.run() }
                 return
