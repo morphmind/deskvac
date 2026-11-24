@@ -1,0 +1,4 @@
+"NSAppleEventsUsageDescription" = "DeskVac, robotun her ikona gidebilmesi ve geri almada ikonları yerine koyabilmesi için masaüstü ikonlarının yerini Finder'a sorar.";
+"NSDesktopFolderUsageDescription" = "DeskVac masaüstündeki dağınık dosyaları klasörlere toplar. Hiçbir şey silinmez.";
+"NSDocumentsFolderUsageDescription" = "DeskVac, Belgeler içinde seçtiğiniz bir klasörü düzenleyebilir.";
+"NSDownloadsFolderUsageDescription" = "DeskVac, seçerseniz İndirilenler klasörünü düzenleyebilir.";

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>io.onore.deskvac</string>
+  <key>CFBundleName</key><string>DeskVac</string>
+  <key>CFBundleDisplayName</key><string>DeskVac</string>
+  <key>CFBundleExecutable</key><string>DeskVac</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>1.0.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>tr</string></array>
+  <key>LSMinimumSystemVersion</key><string>15.0</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
+  <key>LSUIElement</key><true/>
+  <key>NSHumanReadableCopyright</key><string>MIT License, Onore</string>
+  <key>NSAppleEventsUsageDescription</key><string>DeskVac asks Finder where your desktop icons are, so the robot can drive to each one and put icons back when you undo.</string>
+  <key>NSDesktopFolderUsageDescription</key><string>DeskVac sorts the loose files on your desktop into folders. Nothing is deleted.</string>
+  <key>NSDocumentsFolderUsageDescription</key><string>DeskVac can tidy a folder you pick in Documents.</string>
+  <key>NSDownloadsFolderUsageDescription</key><string>DeskVac can tidy your Downloads folder if you pick it.</string>
+</dict>
+</plist>

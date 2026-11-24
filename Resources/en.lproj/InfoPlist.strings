@@ -1,0 +1,4 @@
+"NSAppleEventsUsageDescription" = "DeskVac asks Finder where your desktop icons are, so the robot can drive to each one and put icons back when you undo.";
+"NSDesktopFolderUsageDescription" = "DeskVac sorts the loose files on your desktop into folders. Nothing is deleted.";
+"NSDocumentsFolderUsageDescription" = "DeskVac can tidy a folder you pick in Documents.";
+"NSDownloadsFolderUsageDescription" = "DeskVac can tidy your Downloads folder if you pick it.";
