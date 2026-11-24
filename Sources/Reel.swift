@@ -170,7 +170,7 @@ enum Reel {
     }
 
     /// Settings the take changes, put back afterwards.
-    private struct Snapshot {
+    struct Snapshot {
         let values: [String: Any]
         @MainActor init(_ s: AppSettings) {
             values = [
@@ -179,6 +179,7 @@ enum Reel {
                 "aboveWindows": s.aboveWindows, "showHUD": s.showHUD, "confirm": s.confirmBeforeCleaning,
                 "demoOnly": s.demoOnly, "kindActions": s.kindActions, "park": s.parkOnDesktop,
                 "colors": [s.bodyColor, s.accentColor, s.lidarColor, s.brushColor],
+                "dock": [s.dockX, s.dockY],
             ]
         }
 
@@ -198,6 +199,8 @@ enum Reel {
             s.kindActions = values["kindActions"] as! [FileKind: KindAction]
             let c = values["colors"] as! [String]
             s.bodyColor = c[0]; s.accentColor = c[1]; s.lidarColor = c[2]; s.brushColor = c[3]
+            let dock = values["dock"] as! [Double]
+            s.dockX = dock[0]; s.dockY = dock[1]
             s.parkOnDesktop = values["park"] as! Bool
         }
     }
@@ -213,15 +216,15 @@ final class ReelRecorder: NSObject, SCStreamOutput, @unchecked Sendable {
     private var started = false
     private var recording = false
 
-    func prepare(sourceRect: CGRect, url: URL) async throws {
+    func prepare(sourceRect: CGRect?, width: Int = 1080, height: Int = 1920, hevc: Bool = false, url: URL) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let display = content.displays.first(where: { $0.displayID == CGMainDisplayID() }) ?? content.displays.first else {
             throw CocoaError(.featureUnsupported)
         }
         let cfg = SCStreamConfiguration()
-        cfg.sourceRect = sourceRect
-        cfg.width = 1080
-        cfg.height = 1920
+        if let sourceRect { cfg.sourceRect = sourceRect }
+        cfg.width = width
+        cfg.height = height
         cfg.minimumFrameInterval = CMTime(value: 1, timescale: 60)
         cfg.showsCursor = false
         cfg.pixelFormat = kCVPixelFormatType_32BGRA
@@ -232,8 +235,8 @@ final class ReelRecorder: NSObject, SCStreamOutput, @unchecked Sendable {
 
         let w = try AVAssetWriter(url: url, fileType: .mov)
         let v = AVAssetWriterInput(mediaType: .video, outputSettings: [
-            AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 1080, AVVideoHeightKey: 1920,
-            AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 24_000_000, AVVideoExpectedSourceFrameRateKey: 60],
+            AVVideoCodecKey: hevc ? AVVideoCodecType.hevc : AVVideoCodecType.h264, AVVideoWidthKey: width, AVVideoHeightKey: height,
+            AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: hevc ? 80_000_000 : 24_000_000, AVVideoExpectedSourceFrameRateKey: 60],
         ])
         v.expectsMediaDataInRealTime = true
         let a = AVAssetWriterInput(mediaType: .audio, outputSettings: [

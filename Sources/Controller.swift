@@ -484,6 +484,8 @@ final class CleaningController: ObservableObject {
     }
 
     var isShowingCard: Bool { card != nil }
+    /// Robot center (top-left screen points) and opacity, for the reel camera.
+    var robotTrack: (CGPoint, Double)? { scene.map { ($0.pos, $0.robotAlpha) } }
 
     func closeSummary() {
         closeCard()
