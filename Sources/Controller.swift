@@ -320,18 +320,51 @@ final class CleaningController: ObservableObject {
         showDockButton(for: model)
     }
 
-    /// An invisible button over the parked robot: click it and the robot sets off again.
+    /// Covers the parked robot and its dock: click to clean, drag to move, hover for a close button.
     private func showDockButton(for model: SceneModel) {
         dockButton?.orderOut(nil)
-        let f = screen.frame
-        let r = model.radius
-        let rect = NSRect(x: f.minX + model.dock.x - r * 1.2, y: f.maxY - model.dock.y - r * 1.2,
-                          width: r * 2.4, height: r * 2.4)
-        let button = DockButtonWindow(frame: rect, above: AppSettings.shared.aboveWindows) { [weak self] in
-            self?.start(.clean)
-        }
+        let button = DockButtonWindow(frame: dockFrame(for: model), above: AppSettings.shared.aboveWindows,
+                                      actions: dockActions(for: model))
         dockButton = button
         button.orderFrontRegardless()
+    }
+
+    private func dockFrame(for model: SceneModel) -> NSRect {
+        let f = screen.frame
+        let r = model.radius
+        return NSRect(x: f.minX + model.dock.x - r * 1.35, y: f.maxY - model.dock.y - r * 1.45,
+                      width: r * 2.7, height: r * 2.8)
+    }
+
+    private func dockActions(for model: SceneModel) -> DockButtonWindow.Actions {
+        var start = model.dock
+        return DockButtonWindow.Actions(
+            click: { [weak self] in self?.start(.clean) },
+            dragBegan: { start = model.dock },
+            drag: { [weak self] delta in
+                guard let self else { return }
+                model.moveDock(to: start + delta)
+                self.dockButton?.setFrame(self.dockFrame(for: model), display: false)
+            },
+            dragEnded: { [weak self] in
+                let s = AppSettings.shared
+                s.dockX = model.dock.x
+                s.dockY = model.dock.y
+                if let self { self.dockButton?.setFrame(self.dockFrame(for: model), display: true) }
+            },
+            close: { AppSettings.shared.parkOnDesktop = false }
+        )
+    }
+
+    /// Sends the parked robot back to its default corner.
+    func resetDockPosition() {
+        let s = AppSettings.shared
+        s.dockX = -1
+        s.dockY = -1
+        if let model = scene, model.idle {
+            dropSceneNow()
+            refreshParking()
+        }
     }
 
     /// Shows or hides the parked robot after a settings change or at launch.

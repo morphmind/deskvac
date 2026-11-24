@@ -123,7 +123,11 @@ final class SceneModel: ObservableObject {
         let vf = screen.visibleFrame, f = screen.frame
         let bottom = f.maxY - vf.minY
         let dockX = Reel.band.map { $0.midX } ?? (vf.minX - f.minX + 110)
-        dock = CGPoint(x: dockX, y: bottom - radius * 1.6 - 18)
+        var home = CGPoint(x: dockX, y: bottom - radius * 1.6 - 18)
+        if Reel.band == nil, settings.dockX >= 0, settings.dockY >= 0 {
+            home = SceneModel.clampDock(CGPoint(x: settings.dockX, y: settings.dockY), radius: radius, size: f.size)
+        }
+        dock = home
         pos = dock
     }
 
@@ -224,6 +228,19 @@ final class SceneModel: ObservableObject {
     func clamp(_ p: CGPoint) -> CGPoint {
         CGPoint(x: min(max(p.x, radius + 6), size.width - radius - 6),
                 y: min(max(p.y, radius + 30), size.height - radius - 6))
+    }
+
+    /// Keeps robot and dock fully on screen, below the menu bar.
+    static func clampDock(_ p: CGPoint, radius r: Double, size: CGSize) -> CGPoint {
+        CGPoint(x: min(max(p.x, r * 1.3), size.width - r * 1.3),
+                y: min(max(p.y, r * 1.3 + 30), size.height - r * 1.5))
+    }
+
+    /// Moves the parked robot and its dock together while the user drags it.
+    func moveDock(to p: CGPoint) {
+        dock = SceneModel.clampDock(p, radius: radius, size: size)
+        if idle { pos = dock }
+        objectWillChange.send()
     }
 
     /// Puts the robot on its dock, fully visible, with nothing else on screen.
@@ -575,9 +592,18 @@ struct SceneView: View {
     }
 }
 
-/// Click target that sits exactly over the parked robot. The rest of the screen stays click-through.
+/// Sits exactly over the parked robot and its dock. Click: clean. Drag: move it.
+/// Hover shows a small close button that sends the robot off the desktop.
 final class DockButtonWindow: NSPanel {
-    init(frame: NSRect, above: Bool, action: @escaping () -> Void) {
+    struct Actions {
+        var click: () -> Void
+        var dragBegan: () -> Void
+        var drag: (CGPoint) -> Void
+        var dragEnded: () -> Void
+        var close: () -> Void
+    }
+
+    init(frame: NSRect, above: Bool, actions: Actions) {
         super.init(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         isOpaque = false
         backgroundColor = .clear
@@ -586,16 +612,90 @@ final class DockButtonWindow: NSPanel {
         level = above ? NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
             : NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 2)
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenNone]
-        contentView = NSHostingView(rootView:
-            Circle()
-                .fill(Color.white.opacity(0.001))
-                .contentShape(Circle())
-                .onTapGesture(perform: action)
-                .help(L("dock.help"))
-        )
+        contentView = DockControlView(frame: NSRect(origin: .zero, size: frame.size), actions: actions)
     }
 
     override var canBecomeKey: Bool { false }
+}
+
+final class DockControlView: NSView {
+    private let actions: DockButtonWindow.Actions
+    private let closeButton: NSButton
+    private var downAt: NSPoint?
+    private var dragging = false
+
+    init(frame: NSRect, actions: DockButtonWindow.Actions) {
+        self.actions = actions
+        let image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: L("dock.close")) ?? NSImage()
+        closeButton = NSButton(image: image, target: nil, action: nil)
+        super.init(frame: frame)
+        closeButton.isBordered = false
+        closeButton.imageScaling = .scaleProportionallyUpOrDown
+        closeButton.contentTintColor = NSColor(white: 0.12, alpha: 0.85)
+        closeButton.frame = NSRect(x: frame.width - 26, y: frame.height - 26, width: 22, height: 22)
+        closeButton.toolTip = L("dock.close")
+        closeButton.target = self
+        closeButton.action = #selector(closeTapped)
+        closeButton.alphaValue = 0
+        let bg = NSView(frame: closeButton.frame.insetBy(dx: 3, dy: 3))
+        bg.wantsLayer = true
+        bg.layer?.backgroundColor = NSColor.white.cgColor
+        bg.layer?.cornerRadius = bg.frame.width / 2
+        bg.alphaValue = 0
+        bg.identifier = NSUserInterfaceItemIdentifier("closeBg")
+        addSubview(bg)
+        addSubview(closeButton)
+        toolTip = L("dock.help")
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                       owner: self))
+    }
+
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
+
+    override func mouseEntered(with event: NSEvent) { setCloseVisible(true) }
+    override func mouseExited(with event: NSEvent) { if !dragging { setCloseVisible(false) } }
+
+    private func setCloseVisible(_ on: Bool) {
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.15
+            closeButton.animator().alphaValue = on ? 1 : 0
+            subviews.first { $0.identifier?.rawValue == "closeBg" }?.animator().alphaValue = on ? 1 : 0
+        }
+    }
+
+    @objc private func closeTapped() { actions.close() }
+
+    override func mouseDown(with event: NSEvent) {
+        downAt = NSEvent.mouseLocation
+        dragging = false
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let start = downAt else { return }
+        let now = NSEvent.mouseLocation
+        let dx = now.x - start.x, dy = now.y - start.y
+        if !dragging, hypot(dx, dy) > 3 {
+            dragging = true
+            NSCursor.closedHand.set()
+            actions.dragBegan()
+        }
+        // Screen y grows upwards; the scene's y grows downwards.
+        if dragging { actions.drag(CGPoint(x: dx, y: -dy)) }
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        defer { downAt = nil; dragging = false }
+        if dragging { actions.dragEnded() } else { actions.click() }
+    }
 }
 
 /// Transparent full-screen window that sits just above the desktop icons
