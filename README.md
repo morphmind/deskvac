@@ -28,7 +28,7 @@ It scans the clutter, drives over to every file and sorts it into folders. Nothi
 
 ## Install
 
-**Download:** grab `DeskVac.zip` from [Releases](https://github.com/morphmind/deskvac/releases), unzip and move `DeskVac.app` to Applications. The build is not notarized yet: the first time, right-click the app and choose **Open** (or allow it in System Settings > Privacy & Security).
+**Download:** grab `DeskVac.zip` from [Releases](https://github.com/morphmind/deskvac/releases), unzip and move `DeskVac.app` to Applications. The app is signed with Developer ID and notarized by Apple, so it opens with a double-click.
 
 **Build from source** (macOS 15+, Xcode 16+ command line tools):
 
@@ -38,7 +38,7 @@ cd deskvac
 ./build.sh --install
 ```
 
-`build.sh` uses plain `swiftc`, no Xcode project. It runs the string check and the file-safety self test on every build, draws the app icon from code, and signs ad-hoc if you have no developer certificate.
+`build.sh` uses plain `swiftc`, no Xcode project. It runs the string check and the file-safety self test on every build, draws the app icon from code, and signs with your Developer ID or Apple Development certificate, or ad-hoc if you have none. `./build.sh --notarize` also notarizes and staples the app (needs a `notarytool` keychain profile, `NOTARY_PROFILE`, default `deskvac-notary`).
 
 On the first clean macOS asks for two permissions: **Desktop folder** (to move files) and **Finder automation** (to read icon positions). Without the second one the robot still tidies, it just can't drive to the exact icons.
 
@@ -99,7 +99,7 @@ Issues and pull requests are welcome. New languages: add a table to `Sources/L10
 - **Kişiselleştirme:** altı hazır renk, gövde/ışık/tarayıcı/fırça renkleri, boyut, hız ve ad.
 - **Zamanlama:** her gün belli saatte ya da masaüstünde belli sayıda dosya birikince kendiliğinden çıkar.
 
-**Kurulum:** [Releases](https://github.com/morphmind/deskvac/releases) sayfasından `DeskVac.zip` dosyasını indirip uygulamayı Uygulamalar klasörüne taşıyın, ilk açılışta sağ tıklayıp **Aç** deyin. Kaynaktan derlemek için `./build.sh --install`.
+**Kurulum:** [Releases](https://github.com/morphmind/deskvac/releases) sayfasından `DeskVac.zip` dosyasını indirip uygulamayı Uygulamalar klasörüne taşıyın. Uygulama Developer ID ile imzalı ve Apple tarafından onaylı (notarized), çift tıklayınca açılır. Kaynaktan derlemek için `./build.sh --install`.
 
 **Video çekmek için:** Ayarlar > Genel'de **Yalnız demo dosyalarını topla**'yı açın, kaydı başlatıp `open -a DeskVac --args --demo --clean` komutunu çalıştırın. Gerçek dosyalarınıza dokunulmaz.
 

@@ -3,6 +3,8 @@
 #   ./build.sh            build into build/DeskVac.app
 #   ./build.sh --install  also copy to ~/Applications and launch
 #   ./build.sh --zip      also make build/DeskVac.zip for a GitHub release
+#   ./build.sh --notarize Developer ID sign, notarize with Apple, staple, then zip
+#                         (needs a notarytool keychain profile, default "deskvac-notary")
 set -euo pipefail
 cd "${0:A:h}"
 
@@ -36,12 +38,26 @@ cp "$BIN" "$APP/Contents/MacOS/DeskVac"
 cp Info.plist "$APP/Contents/Info.plist"
 cp -R Resources/*.lproj "$APP/Contents/Resources/"
 
-# Sign with a local Apple Development identity if there is one, otherwise ad-hoc.
-IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null | awk -F'"' '/Developer ID Application|Apple Development/ {print $2; exit}')}"
-codesign --force --options runtime --entitlements DeskVac.entitlements --sign "${IDENTITY:--}" "$APP"
+# Sign with Developer ID if there is one, then Apple Development, otherwise ad-hoc.
+identities=$(security find-identity -v -p codesigning 2>/dev/null || true)
+IDENTITY="${SIGN_IDENTITY:-$(print -r -- "$identities" | awk -F'"' '/Developer ID Application/ {print $2; exit}')}"
+IDENTITY="${IDENTITY:-$(print -r -- "$identities" | awk -F'"' '/Apple Development/ {print $2; exit}')}"
+TIMESTAMP=()
+[[ "$IDENTITY" == Developer\ ID* ]] && TIMESTAMP=(--timestamp)
+codesign --force --options runtime "${TIMESTAMP[@]}" --entitlements DeskVac.entitlements --sign "${IDENTITY:--}" "$APP"
+codesign --verify --strict "$APP"
 echo "built $APP (signed: ${IDENTITY:-ad-hoc})"
 
-if [[ " $* " == *" --zip "* ]]; then
+if [[ " $* " == *" --notarize "* ]]; then
+  [[ "$IDENTITY" == Developer\ ID* ]] || { echo "notarize needs a Developer ID Application identity" >&2; exit 1; }
+  rm -f build/DeskVac.zip
+  ditto -c -k --keepParent "$APP" build/DeskVac.zip
+  xcrun notarytool submit build/DeskVac.zip --keychain-profile "${NOTARY_PROFILE:-deskvac-notary}" --wait
+  xcrun stapler staple "$APP"
+  spctl -a -vv -t exec "$APP"
+fi
+
+if [[ " $* " == *" --zip "* || " $* " == *" --notarize "* ]]; then
   rm -f build/DeskVac.zip
   ditto -c -k --keepParent "$APP" build/DeskVac.zip
   echo "zipped build/DeskVac.zip"
