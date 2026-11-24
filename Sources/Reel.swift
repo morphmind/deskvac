@@ -114,6 +114,44 @@ enum Reel {
         NSApp.terminate(nil)
     }
 
+    /// `--stage`: sets up the desktop for filming the screen with a phone. The person filming clicks
+    /// the parked robot to start; closing the result card puts everything back.
+    static func stage() async {
+        let s = AppSettings.shared
+        let saved = Snapshot(s)
+        s.robotSize = 96
+        s.speed = 360
+        s.bubbles = true
+        s.sound = true
+        s.volume = 0.8
+        s.scanAnimation = true
+        s.getsStuck = true
+        s.aboveWindows = true
+        s.showHUD = false
+        s.confirmBeforeCleaning = false
+        s.demoOnly = true
+        s.kindActions = [:]
+        s.parkOnDesktop = true
+
+        let hidden = NSWorkspace.shared.runningApplications.filter {
+            $0.activationPolicy != .prohibited && $0 != NSRunningApplication.current && !$0.isHidden
+        }
+        hidden.forEach { $0.hide() }
+        StageDesk.hideReal()
+        try? await Task.sleep(for: .seconds(1.5))
+        DemoClutter.make()
+
+        let c = CleaningController.shared
+        while !c.isRunning { try? await Task.sleep(for: .milliseconds(100)) }
+        while c.isRunning { try? await Task.sleep(for: .milliseconds(200)) }
+        while c.isShowingCard { try? await Task.sleep(for: .milliseconds(200)) }
+        try? await Task.sleep(for: .seconds(1))
+        saved.restore(s)
+        DemoClutter.clear()
+        StageDesk.restore()
+        hidden.forEach { $0.unhide() }
+    }
+
     private static func showSettings(in rect: CGRect, screen: NSScreen) -> NSWindow {
         let view = SettingsView()
             .environmentObject(AppSettings.shared)
@@ -341,5 +379,49 @@ private struct EndCardArt: View {
                 Spacer().frame(height: 130)
             }
         }
+    }
+}
+
+/// A staged desktop for filming: the user's own items get Finder's hidden flag (nothing moves,
+/// every path stays the same) and come back afterwards. The list is written to disk first, so an
+/// interrupted take is undone on the next launch.
+@MainActor
+enum StageDesk {
+    static var file: URL { Journal.directory.deletingLastPathComponent().appendingPathComponent("stage-hidden.json") }
+
+    static func hideReal() {
+        let desk = AppSettings.desktopURL
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: desk, includingPropertiesForKeys: [.isHiddenKey], options: [.skipsHiddenFiles])) ?? []
+        let mine = urls.filter { !XAttr.has($0, DesktopScanner.demoAttr) }
+        var list = (try? JSONDecoder().decode([String].self, from: Data(contentsOf: file))) ?? []
+        list += mine.map(\.path)
+        try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        guard (try? JSONEncoder().encode(Array(Set(list))).write(to: file, options: .atomic)) != nil else { return }
+        for u in mine { setHidden(u, true) }
+    }
+
+    static func restore() {
+        guard let data = try? Data(contentsOf: file),
+              let list = try? JSONDecoder().decode([String].self, from: data) else { return }
+        var failed: [String] = []
+        for p in list {
+            let u = URL(fileURLWithPath: p)
+            guard FileManager.default.fileExists(atPath: p) else { continue }
+            if !setHidden(u, false) { failed.append(p) }
+        }
+        if failed.isEmpty {
+            try? FileManager.default.removeItem(at: file)
+        } else {
+            try? JSONEncoder().encode(failed).write(to: file, options: .atomic)
+        }
+    }
+
+    @discardableResult
+    private static func setHidden(_ url: URL, _ hidden: Bool) -> Bool {
+        var u = url
+        var v = URLResourceValues()
+        v.isHidden = hidden
+        return (try? u.setResourceValues(v)) != nil
     }
 }

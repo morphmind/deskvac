@@ -28,12 +28,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
             AppSettings.shared.applyLanguage()
+            if !CommandLine.arguments.contains("--stage") { StageDesk.restore() }
             Scheduler.shared.start()
             CleaningController.shared.refreshParking()
             CleaningController.shared.watchSettings()
             if !AppSettings.shared.hasOnboarded { NSApp.activate(ignoringOtherApps: true) }
             // `open -a DeskVac --args --demo --clean` sets up a take for a screen recording.
             let args = CommandLine.arguments
+            if args.contains("--stage") {
+                Task { await Reel.stage() }
+                return
+            }
             if args.contains("--reel") {
                 Task { await Reel.run() }
                 return

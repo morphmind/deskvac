@@ -450,6 +450,8 @@ final class CleaningController: ObservableObject {
         start(.clean)
     }
 
+    var isShowingCard: Bool { card != nil }
+
     func closeSummary() {
         closeCard()
         teardownScene()
