@@ -340,14 +340,14 @@ private struct CaptionArt: View {
         VStack {
             Spacer()
             Text(text)
-                .font(.system(size: 64, weight: .bold))
-                .tracking(-0.5)
-                .lineSpacing(2)
+                .font(.custom("AvenirNext-DemiBold", size: 60))
+                .lineSpacing(-4)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.45), radius: 6, x: 0, y: 2)
-                .padding(.horizontal, 70)
-            Spacer().frame(height: 760)
+                .shadow(color: .black.opacity(0.55), radius: 0, x: 0, y: 1.5)
+                .shadow(color: .black.opacity(0.35), radius: 5, x: 0, y: 1)
+                .padding(.horizontal, 80)
+            Spacer().frame(height: 440)
         }
     }
 }
